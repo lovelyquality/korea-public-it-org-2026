@@ -80,8 +80,10 @@ h1 .dot{width:11px;height:11px;border-radius:50%;background:#22d3ee;box-shadow:0
 .brow{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:13px;}
 .brow .bl{flex:0 0 130px;color:#94a3b8;}
 .brow .tr{flex:1;height:18px;background:#0a0e1a;border-radius:9px;overflow:hidden;border:1px solid #1e2940;}
-.brow .fl{height:100%;border-radius:9px;background:linear-gradient(90deg,#0ea5c4,#22d3ee);transition:width .6s cubic-bezier(.2,.8,.2,1);}
-.brow .fl.ai{background:linear-gradient(90deg,#ea580c,#fb923c);}
+.brow .fl{height:100%;border-radius:9px;background:#22b8d4;transition:width .7s cubic-bezier(.2,.8,.2,1);}
+.brow .fl.ai{background:#f97316;}
+.brow .fl.top{background:#0891b2;}
+.brow .fl.ai.top{background:#ea580c;}
 .brow .bv{flex:0 0 58px;text-align:right;font-weight:700;color:#cbd5e1;font-size:12.5px;}
 @media print{body{background:#fff;color:#000;}.toolbar,.pager,.modes{display:none;}}
 .tgl{margin-left:auto;background:#0e1424;border:1px solid #1e2940;color:#cdd6f4;width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:17px;line-height:1;}
@@ -125,7 +127,8 @@ h1 .dot{width:11px;height:11px;border-radius:50%;background:#22d3ee;box-shadow:0
 [data-theme=light] .k{background:linear-gradient(160deg,#fff,#f4f8fd);border-color:#e3e8ef;box-shadow:0 2px 8px rgba(15,61,110,.05);}
 [data-theme=light] .k .n{color:#0f3d6e;text-shadow:none;}[data-theme=light] .k.ai .n{color:#c2410c;text-shadow:none;}
 [data-theme=light] .card{background:#fff;border-color:#e3e8ef;}[data-theme=light] .card h3{color:#0f3d6e;}
-[data-theme=light] .brow .bl{color:#475569;}[data-theme=light] .brow .tr{background:#eef2f7;border-color:#e3e8ef;}[data-theme=light] .brow .bv{color:#0f3d6e;}
+[data-theme=light] .brow .bl{color:#475569;}[data-theme=light] .brow .tr{background:#e2e8f0;border-color:#cbd5e1;}[data-theme=light] .brow .bv{color:#0f3d6e;}
+[data-theme=light] .brow .fl{background:#22b8d4;}[data-theme=light] .brow .fl.ai{background:#f97316;}[data-theme=light] .brow .fl.top{background:#0891b2;}[data-theme=light] .brow .fl.ai.top{background:#ea580c;}
 [data-theme=light] ::-webkit-scrollbar-thumb{background:#c3cedd;border-color:#eef2f7;}
 </style>
 <script>(function(){var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark')t='light';document.documentElement.setAttribute('data-theme',t);})();</script>
@@ -227,7 +230,8 @@ function setMode(m){state.mode=m;
   document.getElementById('dash').style.display=o?'none':'block';
   if(o) render(); else {renderDashCtrl();renderDash();}
 }
-function bar(l,n,t,ai){const p=t?Math.round(n/t*100):0;return `<div class="brow"><span class="bl">${l}</span><span class="tr"><span class="fl ${ai?'ai':''}" style="width:${p}%"></span></span><span class="bv">${n} (${p}%)</span></div>`;}
+function bar(l,n,t,ai,top){const p=t?Math.round(n/t*100):0;const cls='fl'+(ai?' ai':'')+((top&&n>0)?' top':'');return `<div class="brow"><span class="bl">${l}</span><span class="tr"><span class="${cls}" data-w="${p}" style="width:0%"></span></span><span class="bv">${n} (${p}%)</span></div>`;}
+function animBars(){requestAnimationFrame(()=>document.querySelectorAll('.fl[data-w]').forEach(el=>el.style.width=el.dataset.w+'%'));}
 function dashData(){return DATA.filter(d=>{
   if(dstate.cat!=='전체'&&d.type!==dstate.cat)return false;
   if(dstate.hcOn&&dstate.hcMin!==''&&d.hc<+dstate.hcMin)return false;
@@ -247,17 +251,26 @@ function renderDash(){
   const N=set.length,c=f=>set.filter(f).length,lv=l=>c(d=>d.level===l),ai=v=>c(d=>d.aiYN===v),g=(gr,f)=>set.filter(d=>d.grp===gr&&f(d)).length;
   const ng=c(d=>d.grp==='공기업'),nj=c(d=>d.grp==='준정부'),nk=c(d=>d.grp==='기타');
   if(!N){document.getElementById('dashbody').innerHTML='<div class="empty">🔍 조건에 맞는 기관이 없습니다.</div>';return;}
+  const lvBoss=lv('본부급'),lvPS=lv('처·실급'),lvTeam=lv('팀급'),lvEtc=lv('분산·미상');
+  const lvMax=Math.max(lvBoss,lvPS,lvTeam,lvEtc);
+  const aiYes=ai('있음'),aiNo=ai('없음'),aiUnk=ai('확인불가');
+  const aiMax=Math.max(aiYes,aiNo,aiUnk);
+  const gaiE=g('공기업',d=>d.aiYN==='있음'),gaiJ=g('준정부',d=>d.aiYN==='있음'),gaiK=g('기타',d=>d.aiYN==='있음');
+  const paiE=ng?gaiE/ng:0,paiJ=nj?gaiJ/nj:0,paiK=nk?gaiK/nk:0,paiMax=Math.max(paiE,paiJ,paiK);
+  const gbE=g('공기업',d=>d.level==='본부급'),gbJ=g('준정부',d=>d.level==='본부급'),gbK=g('기타',d=>d.level==='본부급');
+  const pbE=ng?gbE/ng:0,pbJ=nj?gbJ/nj:0,pbK=nk?gbK/nk:0,pbMax=Math.max(pbE,pbJ,pbK);
   document.getElementById('dashbody').innerHTML=`<div class="kpi">
     <div class="k"><div class="n">${N}</div><div class="t">조사 기관</div></div>
-    <div class="k ai"><div class="n">${ai('있음')}</div><div class="t">AI 전담조직 보유</div></div>
-    <div class="k"><div class="n">${lv('본부급')}</div><div class="t">본부급 IT조직</div></div>
+    <div class="k ai"><div class="n">${aiYes}</div><div class="t">AI 전담조직 보유</div></div>
+    <div class="k"><div class="n">${lvBoss}</div><div class="t">본부급 IT조직</div></div>
     <div class="k ai"><div class="n">${c(d=>d.ax)}</div><div class="t">AX 명칭 채택</div></div></div>
    <div class="dgrid">
-    <div class="card"><h3>IT조직 레벨 분포</h3>${bar('본부급',lv('본부급'),N)}${bar('처·실급',lv('처·실급'),N)}${bar('팀급',lv('팀급'),N)}${lv('분산·미상')?bar('분산·미상',lv('분산·미상'),N):''}</div>
-    <div class="card"><h3>AI 전담조직 유무</h3>${bar('있음',ai('있음'),N,true)}${bar('없음',ai('없음'),N)}${bar('확인불가',ai('확인불가'),N)}</div>
-    <div class="card"><h3>AI 보유율 — 그룹 비교</h3>${bar('공기업 ('+ng+')',g('공기업',d=>d.aiYN==='있음'),ng,true)}${bar('준정부 ('+nj+')',g('준정부',d=>d.aiYN==='있음'),nj,true)}${bar('기타 ('+nk+')',g('기타',d=>d.aiYN==='있음'),nk,true)}</div>
-    <div class="card"><h3>본부급 비율 — 그룹 비교</h3>${bar('공기업 ('+ng+')',g('공기업',d=>d.level==='본부급'),ng)}${bar('준정부 ('+nj+')',g('준정부',d=>d.level==='본부급'),nj)}${bar('기타 ('+nk+')',g('기타',d=>d.level==='본부급'),nk)}</div></div>
+    <div class="card"><h3>IT조직 레벨 분포</h3>${bar('본부급',lvBoss,N,false,lvBoss===lvMax&&lvBoss>0)}${bar('처·실급',lvPS,N,false,lvPS===lvMax&&lvPS>0)}${bar('팀급',lvTeam,N,false,lvTeam===lvMax&&lvTeam>0)}${lvEtc?bar('분산·미상',lvEtc,N,false,lvEtc===lvMax&&lvEtc>0):''}</div>
+    <div class="card"><h3>AI 전담조직 유무</h3>${bar('있음',aiYes,N,true,aiYes===aiMax&&aiYes>0)}${bar('없음',aiNo,N,false,aiNo===aiMax&&aiNo>0)}${bar('확인불가',aiUnk,N,false,aiUnk===aiMax&&aiUnk>0)}</div>
+    <div class="card"><h3>AI 보유율 — 그룹 비교</h3>${bar('공기업 ('+ng+')',gaiE,ng,true,paiMax>0&&Math.abs(paiE-paiMax)<1e-9)}${bar('준정부 ('+nj+')',gaiJ,nj,true,paiMax>0&&Math.abs(paiJ-paiMax)<1e-9)}${bar('기타 ('+nk+')',gaiK,nk,true,paiMax>0&&Math.abs(paiK-paiMax)<1e-9)}</div>
+    <div class="card"><h3>본부급 비율 — 그룹 비교</h3>${bar('공기업 ('+ng+')',gbE,ng,false,pbMax>0&&Math.abs(pbE-pbMax)<1e-9)}${bar('준정부 ('+nj+')',gbJ,nj,false,pbMax>0&&Math.abs(pbJ-pbMax)<1e-9)}${bar('기타 ('+nk+')',gbK,nk,false,pbMax>0&&Math.abs(pbK-pbMax)<1e-9)}</div></div>
    <div class="sub" style="margin-top:14px">※ 현재 조건 ${N}개 기관 기준 집계 (카테고리·직원 수 조건 반영).</div>`;
+  animBars();
 }
 function drawConn(chart){const svg=chart.querySelector('svg');if(!svg)return;
   const hq=chart.querySelector('[data-hq]'),deps=[...chart.querySelectorAll('[data-dept]')];
