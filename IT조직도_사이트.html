@@ -85,6 +85,15 @@ h1 .dot{width:11px;height:11px;border-radius:50%;background:#22d3ee;box-shadow:0
 .brow .fl.top{background:#1d4ed8;}
 .brow .fl.ai.top{background:#c2410c;}
 .brow .bv{flex:0 0 58px;text-align:right;font-weight:700;color:#cbd5e1;font-size:12.5px;}
+.brow-hl .bl{color:#fcd34d !important;font-weight:700;}
+.matrix{width:100%;border-collapse:collapse;font-size:13px;margin-top:2px;}
+.matrix th,.matrix td{padding:8px 7px;text-align:center;border:1px solid #1e2940;}
+.matrix th{color:#94a3b8;background:#0e1424;font-weight:600;font-size:12px;}
+.matrix td{color:#cbd5e1;}
+.matrix td.hl{background:rgba(251,146,60,.2);color:#fb923c;font-weight:800;border-color:#7c4a1e;}
+.matrix td.zero{color:#3f4d66;}
+.matrix .rhd{text-align:left;padding-left:10px;color:#94a3b8;font-size:12px;}
+.card.min-card .brow .bl{flex:0 0 164px;}
 @media print{body{background:#fff;color:#000;}.toolbar,.pager,.modes{display:none;}}
 /* ===== MOBILE ===== */
 @media (max-width:640px){
@@ -134,6 +143,8 @@ h1 .dot{width:11px;height:11px;border-radius:50%;background:#22d3ee;box-shadow:0
   .brow{font-size:12px;gap:7px;}
   .brow .bl{flex:0 0 95px;}
   .brow .bv{flex:0 0 44px;font-size:11px;}
+  .card.min-card .brow .bl{flex:0 0 88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .matrix th,.matrix td{padding:5px 4px;font-size:11px;}
 }
 .tgl{margin-left:auto;background:#0e1424;border:1px solid #1e2940;color:#cdd6f4;width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:17px;line-height:1;}
 .tgl:hover{border-color:#22d3ee;}
@@ -178,6 +189,7 @@ h1 .dot{width:11px;height:11px;border-radius:50%;background:#22d3ee;box-shadow:0
 [data-theme=light] .card{background:#fff;border-color:#e3e8ef;}[data-theme=light] .card h3{color:#0f3d6e;}
 [data-theme=light] .brow .bl{color:#475569;}[data-theme=light] .brow .tr{background:#e2e8f0;border-color:#cbd5e1;}[data-theme=light] .brow .bv{color:#0f3d6e;}
 [data-theme=light] .brow .fl{background:#3b82f6;}[data-theme=light] .brow .fl.ai{background:#f97316;}[data-theme=light] .brow .fl.top{background:#1d4ed8;}[data-theme=light] .brow .fl.ai.top{background:#c2410c;}
+[data-theme=light] .matrix th{background:#f1f5fa;color:#475569;border-color:#e3e8ef;}[data-theme=light] .matrix td{color:#1f2937;border-color:#e3e8ef;}[data-theme=light] .matrix td.hl{background:rgba(194,65,12,.1);color:#c2410c;}[data-theme=light] .matrix td.zero{color:#c1c9d6;}[data-theme=light] .brow-hl .bl{color:#92400e !important;}
 [data-theme=light] ::-webkit-scrollbar-thumb{background:#c3cedd;border-color:#eef2f7;}
 /* ===== FOOTER ===== */
 footer{margin-top:56px;padding:28px 0 36px;border-top:1px solid #1e2940;text-align:center;}
@@ -311,6 +323,19 @@ function renderDashCtrl(){
     <input type="number" id="dhmin" class="numin" placeholder="0" ${dstate.hcOn?'':'disabled'} value="${dstate.hcMin}" oninput="dstate.hcMin=this.value;renderDash()"><span class="lab">명 이상</span>
   </div></div>`;
 }
+function minAiRows(set){
+  const mp={};
+  set.forEach(d=>{if(!mp[d.min])mp[d.min]={n:0,ai:0};mp[d.min].n++;if(d.aiYN==='있음')mp[d.min].ai++;});
+  const mins=Object.entries(mp).filter(([,v])=>v.n>=5).map(([k,v])=>({k,n:v.n,ai:v.ai,rate:v.ai/v.n})).sort((a,b)=>b.rate-a.rate);
+  if(!mins.length)return '<div style="color:#5a6b86;text-align:center;padding:20px">데이터 부족</div>';
+  return mins.map(({k,n,ai,rate})=>{const pct=Math.round(rate*100);const isKT=k==='국토교통부';const cls='fl ai'+(isKT?' top':'');return `<div class="brow${isKT?' brow-hl':''}"><span class="bl">${esc(k)}<small style="opacity:.55"> ${n}</small></span><span class="tr"><span class="${cls}" data-w="${pct}" style="width:0%"></span></span><span class="bv">${pct}%</span></div>`;}).join('');
+}
+function matrixHtml(set){
+  const LEVELS=['본부급','처·실급','팀급','분산·미상'],AIVALS=['있음','없음','확인불가'];
+  const rows=LEVELS.map(l=>{const tot=set.filter(d=>d.level===l).length;const cells=AIVALS.map(a=>{const n=set.filter(d=>d.level===l&&d.aiYN===a).length;const isHl=l==='본부급'&&a==='있음';const cls=isHl?'hl':n===0?'zero':'';return `<td class="${cls}">${isHl?`<b>${n}</b> ★`:n}</td>`;}).join('');return `<tr><td class="rhd">${esc(l)}</td>${cells}<td style="color:#5a6b86;font-size:12px">${tot}</td></tr>`;}).join('');
+  const totRow=AIVALS.map(a=>`<td style="font-weight:700;color:#cbd5e1">${set.filter(d=>d.aiYN===a).length}</td>`).join('');
+  return `<table class="matrix"><thead><tr><th></th><th style="color:#fb923c">AI있음</th><th>없음</th><th>확인불가</th><th style="color:#5a6b86">소계</th></tr></thead><tbody>${rows}<tr style="border-top:2px solid #2d3c5c"><td class="rhd" style="font-weight:700;color:#94a3b8">합계</td>${totRow}<td style="font-weight:700;color:#cbd5e1">${set.length}</td></tr></tbody></table>`;
+}
 function renderDash(){
   const set=dashData();
   const N=set.length,c=f=>set.filter(f).length,lv=l=>c(d=>d.level===l),ai=v=>c(d=>d.aiYN===v),g=(gr,f)=>set.filter(d=>d.grp===gr&&f(d)).length;
@@ -334,6 +359,9 @@ function renderDash(){
     <div class="card"><h3>AI 전담조직 유무</h3>${bar('있음',aiYes,N,true,aiYes===aiMax&&aiYes>0)}${bar('없음',aiNo,N,false,aiNo===aiMax&&aiNo>0)}${bar('확인불가',aiUnk,N,false,aiUnk===aiMax&&aiUnk>0)}</div>
     <div class="card"><h3>AI 보유율 — 그룹 비교</h3>${bar('공기업 ('+ng+')',gaiE,ng,true,paiMax>0&&Math.abs(paiE-paiMax)<1e-9)}${bar('준정부 ('+nj+')',gaiJ,nj,true,paiMax>0&&Math.abs(paiJ-paiMax)<1e-9)}${bar('기타 ('+nk+')',gaiK,nk,true,paiMax>0&&Math.abs(paiK-paiMax)<1e-9)}</div>
     <div class="card"><h3>본부급 비율 — 그룹 비교</h3>${bar('공기업 ('+ng+')',gbE,ng,false,pbMax>0&&Math.abs(pbE-pbMax)<1e-9)}${bar('준정부 ('+nj+')',gbJ,nj,false,pbMax>0&&Math.abs(pbJ-pbMax)<1e-9)}${bar('기타 ('+nk+')',gbK,nk,false,pbMax>0&&Math.abs(pbK-pbMax)<1e-9)}</div></div>
+   <div class="dgrid" style="margin-top:16px">
+    <div class="card min-card" style="grid-column:1/-1"><h3>📊 주무부처별 AI 도입률 (산하 기관 5개 이상)</h3>${minAiRows(set)}<div style="font-size:11.5px;color:#5a6b86;margin-top:8px">★ 국토교통부: 코레일 소속 주무부처 · 숫자 = 산하기관 수 · 내림차순 정렬</div></div>
+    <div class="card"><h3>🔢 IT조직레벨 × AI전담 매트릭스</h3>${matrixHtml(set)}<div style="font-size:11.5px;color:#5a6b86;margin-top:8px">★ 코레일 위치: 본부급 + AI있음</div></div></div>
    <div class="sub" style="margin-top:14px">※ 현재 조건 ${N}개 기관 기준 집계 (카테고리·직원 수 조건 반영).</div>`;
   animBars();
 }
@@ -364,7 +392,7 @@ render();
     <div class="ft-org">KORAIL AI전략본부</div>
     <div class="ft-name">김승용 과장</div>
     <a class="ft-email" href="mailto:mechuri@korail.com">mechuri@korail.com</a>
-    <div class="ft-date">최종 업데이트: 2026-06-17</div>
+    <div class="ft-date">최종 업데이트: 2026-06-18</div>
   </div>
 </footer>
 </body></html>
