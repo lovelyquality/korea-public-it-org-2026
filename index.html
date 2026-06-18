@@ -284,7 +284,7 @@ function orgHTML(d){
   const summary=`<div class="summary"><span>AI전담 <b class="${aiCls}">${esc(d.aiYN)}</b></span><span>· 조직레벨 <b>${esc(d.level)}</b></span>`+
     (d.aiOrg?`<span>· AI조직 <b class="ai">${esc(d.aiOrg)}</b></span>`:'')+`<span>· IT최상위 <b>${esc((d.hq||'').split('(')[0])}</b></span></div>`;
   const note=d.note?`<div class="note">${esc(d.note.slice(0,240))}${d.note.length>240?'…':''}</div>`:'';
-  return `<section class="org"><div class="oh"><h2>${esc(d.name)}</h2><div class="badges">${badges}${urlBtn}</div></div>${summary}${chart}${note}</section>`;
+  return `<section class="org"><div class="oh"><h2>${esc(d.name)}</h2>${urlBtn}<div class="badges">${badges}</div></div>${summary}${chart}${note}</section>`;
 }
 function render(){
   const list=filtered(), pages=Math.max(1,Math.ceil(list.length/PER));
